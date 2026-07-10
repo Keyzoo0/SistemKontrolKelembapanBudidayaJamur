@@ -1,0 +1,176 @@
+/* ============================================================
+   KUMBUNG TENGAH MALAM — Kendali Kabut Budidaya Jamur
+   Token: lumut (latar), tanah (kartu), krem jamur (angka),
+   embun (kelembapan), jerami (suhu)
+   ============================================================ */
+:root{
+  --lumut:#0E1512;          /* latar halaman */
+  --tanah:#16201B;          /* permukaan kartu */
+  --tanah-2:#1E2A23;        /* permukaan terangkat */
+  --krem:#EFE9DA;           /* tinta utama (tudung jamur) */
+  --sage:#AEBDB2;           /* tinta sekunder */
+  --muted:#7E8B81;          /* label redup */
+  --grid:#26332C;           /* garis kisi */
+  --border:rgba(239,233,218,.09);
+
+  --embun:#1FA98F;          /* seri kelembapan (tervalidasi) */
+  --embun-terang:#45D6BE;   /* aksen UI kecil / glow */
+  --jerami:#A8762B;         /* seri suhu (tervalidasi) */
+
+  --baik:#63C97B;
+  --waspada:#E8B84B;
+  --kritis:#E5604F;
+
+  --f-disp:"Bricolage Grotesque",system-ui,sans-serif;
+  --f-body:"Instrument Sans",system-ui,sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,monospace;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{color-scheme:dark}
+body{
+  background:
+    radial-gradient(1100px 500px at 85% -10%, rgba(31,169,143,.06), transparent 60%),
+    var(--lumut);
+  color:var(--krem);
+  font-family:var(--f-body);
+  font-size:14.5px; line-height:1.5;
+  padding:16px;
+}
+.wrap{max-width:1060px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
+.mono{font-family:var(--f-mono)}
+.eyebrow{
+  font-family:var(--f-mono);font-size:10.5px;font-weight:600;
+  letter-spacing:.14em;color:var(--muted);
+}
+button{font-family:var(--f-body)}
+:is(button,input,.slider):focus-visible{outline:2px solid var(--embun-terang);outline-offset:2px;border-radius:6px}
+
+/* ---------------- header ---------------- */
+header{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between;padding:4px 2px}
+header h1{font-family:var(--f-disp);font-size:26px;font-weight:700;letter-spacing:-.01em;margin-top:3px}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{display:inline-flex;align-items:center;gap:7px;background:var(--tanah);
+  border:1px solid var(--border);border-radius:999px;padding:5px 11px;
+  font-size:12px;color:var(--sage)}
+.chip.mono{font-size:11.5px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
+.dot.on{background:var(--baik);box-shadow:0 0 8px rgba(99,201,123,.55)}
+.dot.off{background:var(--kritis)}
+
+/* ---------------- banner ---------------- */
+.banner{display:none;align-items:center;gap:10px;border-radius:12px;padding:11px 14px;
+  background:var(--tanah);border:1px solid var(--border);border-left:4px solid var(--kritis);font-size:13px;color:var(--sage)}
+.banner.show{display:flex}
+.banner b{color:var(--krem)}
+.banner .ic{font-size:16px;flex:none}
+.banner button{margin-left:auto;background:var(--kritis);border:0;color:#fff;border-radius:9px;
+  padding:7px 13px;font-size:12px;font-weight:600;cursor:pointer}
+.banner.warn{border-left-color:var(--waspada)}
+
+/* ---------------- kartu ---------------- */
+.card{background:var(--tanah);border:1px solid var(--border);border-radius:16px;padding:18px}
+.card h2{font-family:var(--f-disp);font-size:15px;font-weight:600;color:var(--sage);margin-bottom:10px}
+
+/* ---------------- hero + kabut ---------------- */
+.hero{position:relative;overflow:hidden;padding:22px 22px 18px}
+.hero-in{position:relative;z-index:1}
+.hero-row{display:flex;flex-wrap:wrap;align-items:flex-end;gap:10px 26px;margin-top:2px}
+.hero-val{font-family:var(--f-disp);font-weight:800;letter-spacing:-.03em;
+  font-size:clamp(58px,13vw,96px);line-height:.95;font-variation-settings:"opsz" 96}
+.hero-val .unit{font-size:.38em;font-weight:600;color:var(--sage);margin-left:4px}
+.hero-side{display:flex;flex-direction:column;gap:8px;padding-bottom:10px}
+.hero-target{font-size:11px;color:var(--muted)}
+.ai{display:flex;gap:9px;margin-top:14px;font-size:13.5px;color:var(--sage);
+  border-top:1px solid var(--grid);padding-top:12px}
+.ai-ic{flex:none}
+
+/* kabut hidup — kepekatan mengikuti PWM mist maker */
+.fog{position:absolute;inset:0;pointer-events:none;opacity:0;transition:opacity 1.4s ease;
+  background:radial-gradient(120% 95% at 28% 118%, rgba(69,214,190,.13), transparent 62%)}
+.fog i{position:absolute;bottom:-55%;left:-8%;width:75%;aspect-ratio:1.7;border-radius:50%;
+  background:radial-gradient(ellipse at center, rgba(69,214,190,.22), transparent 62%);
+  filter:blur(26px);will-change:transform;
+  animation:drift 19s ease-in-out infinite alternate}
+.fog i:nth-child(2){left:32%;width:90%;bottom:-65%;animation-duration:25s;animation-delay:-9s}
+.fog i:nth-child(3){left:60%;width:65%;bottom:-45%;animation-duration:15s;animation-delay:-5s;opacity:.75}
+.fog.windy i{animation-duration:9s;animation-timing-function:linear}
+@keyframes drift{
+  from{transform:translateX(-9%) translateY(3%) scale(1)}
+  to{transform:translateX(11%) translateY(-7%) scale(1.12)}
+}
+@media (prefers-reduced-motion:reduce){
+  .fog i{animation:none}
+  .bar i{transition:none}
+}
+
+/* ---------------- badge status ---------------- */
+.badge{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;
+  border-radius:999px;padding:4px 11px;background:var(--tanah-2);color:var(--sage);width:max-content}
+.badge.good{background:rgba(99,201,123,.13);color:var(--baik)}
+.badge.warn{background:rgba(232,184,75,.12);color:var(--waspada)}
+.badge.crit{background:rgba(229,96,79,.14);color:var(--kritis)}
+
+/* ---------------- grafik ---------------- */
+.chart-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 16px;justify-content:space-between}
+.legend{display:flex;gap:16px;flex-wrap:wrap;font-size:10.5px;color:var(--sage);letter-spacing:.04em}
+.legend span{display:inline-flex;align-items:center;gap:7px}
+.sw{width:18px;height:0;border-top:3px solid var(--embun);display:inline-block;border-radius:2px}
+.sw.dash{border-top-style:dashed;border-top-width:2px}
+.sw.band{width:15px;height:11px;border:0;background:rgba(99,201,123,.28);border-radius:3px}
+#chart{width:100%;height:430px;margin-top:4px}
+.chart-fallback{padding:40px 20px;text-align:center;color:var(--muted);font-size:13px}
+
+/* ---------------- tiles ---------------- */
+.tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(220px,100%),1fr));gap:14px}
+.tile{background:var(--tanah);border:1px solid var(--border);border-radius:16px;padding:16px}
+.tile .lbl{font-family:var(--f-mono);font-size:10px;font-weight:600;letter-spacing:.13em;color:var(--muted)}
+.tile .val{font-family:var(--f-disp);font-size:32px;font-weight:700;letter-spacing:-.02em;margin-top:6px}
+.tile .val small{font-size:15px;color:var(--sage);font-weight:500}
+.tile .foot{font-size:12px;color:var(--muted);margin-top:6px;display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+
+/* ---------------- kontrol ---------------- */
+.ctl-row{display:flex;flex-wrap:wrap;align-items:center;gap:12px 18px;padding:14px 0;border-top:1px solid var(--grid)}
+.ctl-row:first-of-type{border-top:0;padding-top:6px}
+.ctl-name{min-width:210px;flex:1}
+.ctl-name b{font-size:14.5px;font-weight:600}
+.ctl-name .st{font-size:11.5px;color:var(--muted);margin-top:2px}
+.seg{display:flex;background:var(--lumut);border:1px solid var(--border);border-radius:10px;overflow:hidden;flex:none}
+.seg button{background:none;border:0;color:var(--muted);padding:7px 15px;font-size:11.5px;cursor:pointer;
+  font-weight:600;font-family:var(--f-mono);letter-spacing:.06em;transition:.15s}
+.seg button.act{background:rgba(31,169,143,.16);color:var(--embun-terang)}
+.ctl-io{display:flex;align-items:center;gap:12px;flex:2;min-width:200px}
+.pct{min-width:48px;text-align:right;font-weight:600;font-size:13px}
+
+input[type=range]{flex:1;appearance:none;-webkit-appearance:none;height:26px;background:none;cursor:pointer}
+input[type=range]::-webkit-slider-runnable-track{height:6px;border-radius:99px;
+  background:linear-gradient(90deg,var(--embun),var(--embun-terang)) no-repeat var(--lumut);
+  background-size:var(--fill,0%) 100%;border:1px solid var(--border)}
+input[type=range]::-webkit-slider-thumb{appearance:none;-webkit-appearance:none;width:18px;height:18px;border-radius:50%;
+  background:var(--krem);margin-top:-7px;border:3px solid var(--embun);box-shadow:0 1px 6px rgba(0,0,0,.5)}
+input[type=range]::-moz-range-track{height:6px;border-radius:99px;background:var(--lumut);border:1px solid var(--border)}
+input[type=range]::-moz-range-progress{height:6px;border-radius:99px;background:var(--embun)}
+input[type=range]::-moz-range-thumb{width:14px;height:14px;border-radius:50%;background:var(--krem);border:3px solid var(--embun)}
+input[type=range]:disabled{opacity:.4;cursor:not-allowed}
+
+.switch{position:relative;width:48px;height:27px;flex:none}
+.switch input{opacity:0;width:0;height:0}
+.slider{position:absolute;inset:0;background:var(--lumut);border:1px solid var(--border);
+  border-radius:999px;transition:.18s;cursor:pointer}
+.slider:before{content:"";position:absolute;width:19px;height:19px;border-radius:50%;
+  background:var(--muted);top:3px;left:4px;transition:.18s}
+.switch input:checked + .slider{background:var(--embun);border-color:var(--embun)}
+.switch input:checked + .slider:before{background:var(--krem);transform:translateX(20px)}
+.switch input:disabled + .slider{opacity:.4;cursor:not-allowed}
+
+.bar{flex:1;height:7px;border-radius:99px;background:var(--lumut);border:1px solid var(--border);overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--embun),var(--embun-terang));
+  border-radius:99px;transition:width .6s ease}
+
+footer{color:var(--muted);font-size:10.5px;text-align:center;padding:4px 0 16px;letter-spacing:.05em}
+
+@media (max-width:640px){
+  body{padding:10px}
+  #chart{height:360px}
+  .ctl-name{min-width:100%}
+  .hero{padding:18px 16px 14px}
+}

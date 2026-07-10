@@ -9,6 +9,15 @@ Dashboard web disajikan langsung dari flash ESP32 (LittleFS): grafik kelembapan
 3 menit ke belakang + ramalan 5 menit ke depan dengan garis **SEKARANG** di tengah,
 monitoring realtime, dan saklar manual untuk setiap aktuator.
 
+![Dashboard Kendali Kabut](docs/dashboard.png)
+
+Desain "Kumbung Tengah Malam": latar gelap lumut, angka krem, aksen teal embun,
+dengan **lapisan kabut hidup di hero yang kepekatannya mengikuti PWM mist maker**.
+Grafik memakai Apache ECharts; font Bricolage Grotesque + Instrument Sans +
+JetBrains Mono via Google Fonts (CDN — perangkat yang MEMBUKA dashboard butuh
+internet untuk grafik & font; monitoring dan semua kontrol tetap berfungsi tanpa
+internet).
+
 ## Fitur
 
 - 📈 **Grafik realtime**: riwayat suhu & kelembapan 3 menit (kiri) + prediksi AI 5 menit (kanan), zona ideal 70–90% ditandai.
@@ -63,6 +72,15 @@ esptool --chip esp32 --port /dev/ttyUSB0 --baud 460800 write_flash 0x310000 buil
 Atau jalankan `./upload.sh` (mengerjakan semua langkah di atas).
 
 Dari Arduino IDE: upload sketch biasa + plugin *LittleFS Data Upload* untuk folder `data/`.
+
+Isi folder `data/` (dashboard, disajikan dari LittleFS):
+
+```
+data/
+├── index.html   # struktur halaman
+├── style.css    # tema "Kumbung Tengah Malam" + kabut hidup
+└── app.js       # poll API 2 dtk, grafik ECharts, kontrol aktuator
+```
 
 ## Cara pakai
 

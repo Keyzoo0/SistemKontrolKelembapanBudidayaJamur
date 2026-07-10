@@ -3,542 +3,142 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Kontrol Kelembapan Jamur</title>
-<style>
-  :root{
-    --page:#0d0d0d; --surface:#1a1a19; --surface2:#232322;
-    --border:rgba(255,255,255,.10);
-    --ink:#ffffff; --ink2:#c3c2b7; --muted:#898781;
-    --grid:#2c2c2a; --axis:#383835;
-    --s1:#3987e5;            /* kelembapan */
-    --s2:#199e70;            /* suhu */
-    --good:#0ca30c; --warn:#fab219; --crit:#d03b3b;
-  }
-  *{box-sizing:border-box;margin:0;padding:0}
-  body{
-    background:var(--page); color:var(--ink);
-    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
-    font-size:14px; line-height:1.45; padding:14px;
-  }
-  .wrap{max-width:1080px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
-
-  /* ---------- header ---------- */
-  header{display:flex;flex-wrap:wrap;align-items:center;gap:10px;justify-content:space-between;padding:4px 2px}
-  header h1{font-size:18px;font-weight:700}
-  header .sub{color:var(--muted);font-size:12px;margin-top:2px}
-  .chips{display:flex;gap:8px;flex-wrap:wrap}
-  .chip{display:inline-flex;align-items:center;gap:6px;background:var(--surface);
-    border:1px solid var(--border);border-radius:999px;padding:4px 10px;font-size:12px;color:var(--ink2)}
-  .dot{width:8px;height:8px;border-radius:50%;background:var(--muted);flex:none}
-  .dot.on{background:var(--good)} .dot.off{background:var(--crit)}
-
-  /* ---------- banner ---------- */
-  .banner{display:none;align-items:center;gap:10px;border-radius:10px;padding:10px 14px;
-    background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--crit);font-size:13px}
-  .banner.show{display:flex}
-  .banner .ic{font-size:16px;flex:none}
-  .banner button{margin-left:auto;background:var(--crit);border:0;color:#fff;border-radius:8px;
-    padding:6px 12px;font-size:12px;cursor:pointer}
-  .banner.warn{border-left-color:var(--warn)}
-
-  /* ---------- kartu umum ---------- */
-  .card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px}
-  .card h2{font-size:13px;font-weight:600;color:var(--ink2);margin-bottom:8px}
-
-  /* ---------- grafik ---------- */
-  .chart-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px;justify-content:space-between}
-  .legend{display:flex;gap:14px;flex-wrap:wrap;font-size:11.5px;color:var(--ink2)}
-  .legend span{display:inline-flex;align-items:center;gap:6px}
-  .sw{width:16px;height:0;border-top:2.5px solid var(--s1);display:inline-block}
-  .sw.dash{border-top-style:dashed}
-  .sw.band{width:14px;height:10px;border:0;background:rgba(12,163,12,.25);border-radius:2px}
-  .chart-box{position:relative;margin-top:8px}
-  canvas{display:block;width:100%;height:400px}
-  #tip{position:absolute;pointer-events:none;display:none;background:#262624;border:1px solid var(--border);
-    border-radius:8px;padding:7px 10px;font-size:12px;color:var(--ink2);white-space:nowrap;z-index:5;
-    box-shadow:0 4px 14px rgba(0,0,0,.45)}
-  #tip b{color:var(--ink)}
-
-  /* ---------- tiles ---------- */
-  .tiles{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:12px}
-  .tile{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:14px}
-  .tile .lbl{font-size:12px;color:var(--muted)}
-  .tile .val{font-size:30px;font-weight:700;margin-top:2px}
-  .tile .val small{font-size:15px;color:var(--ink2);font-weight:500}
-  .tile .foot{font-size:11.5px;color:var(--muted);margin-top:6px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
-  .badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;
-    border-radius:999px;padding:2px 9px}
-  .badge.good{background:rgba(12,163,12,.15);color:#4fd24f}
-  .badge.warn{background:rgba(250,178,25,.14);color:var(--warn)}
-  .badge.crit{background:rgba(208,59,59,.16);color:#f07575}
-
-  /* ---------- AI bar ---------- */
-  .ai{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink2)}
-  .ai .ic{font-size:17px}
-
-  /* ---------- kontrol ---------- */
-  .ctl-row{display:flex;flex-wrap:wrap;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--grid)}
-  .ctl-row:first-of-type{border-top:0}
-  .ctl-name{min-width:150px}
-  .ctl-name b{font-size:14px}
-  .ctl-name .st{font-size:11.5px;color:var(--muted);margin-top:1px}
-  .seg{display:flex;background:var(--surface2);border:1px solid var(--border);border-radius:9px;overflow:hidden}
-  .seg button{background:none;border:0;color:var(--muted);padding:6px 14px;font-size:12px;cursor:pointer;font-weight:600}
-  .seg button.act{background:var(--s1);color:#fff}
-  .ctl-io{display:flex;align-items:center;gap:10px;flex:1;min-width:180px}
-  input[type=range]{flex:1;accent-color:var(--s1);height:26px}
-  .pct{min-width:46px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
-  .switch{position:relative;width:46px;height:26px;flex:none}
-  .switch input{opacity:0;width:0;height:0}
-  .slider{position:absolute;inset:0;background:var(--surface2);border:1px solid var(--border);
-    border-radius:999px;transition:.15s;cursor:pointer}
-  .slider:before{content:"";position:absolute;width:18px;height:18px;border-radius:50%;
-    background:var(--muted);top:3px;left:4px;transition:.15s}
-  .switch input:checked + .slider{background:var(--s1);border-color:var(--s1)}
-  .switch input:checked + .slider:before{background:#fff;transform:translateX(19px)}
-  .switch input:disabled + .slider{opacity:.45;cursor:not-allowed}
-  input[type=range]:disabled{opacity:.45}
-  .bar{flex:1;height:8px;border-radius:99px;background:var(--surface2);overflow:hidden}
-  .bar i{display:block;height:100%;width:0;background:var(--s1);border-radius:99px;transition:width .5s}
-
-  footer{color:var(--muted);font-size:11.5px;text-align:center;padding:6px 0 14px}
-  @media (max-width:640px){
-    canvas{height:340px}
-    .ctl-name{min-width:120px}
-  }
-</style>
+<title>Kumbung Sukosewu · Kendali Kabut</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍄</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
 </head>
 <body>
 <div class="wrap">
 
+  <!-- ================= HEADER ================= -->
   <header>
     <div>
-      <h1>🍄 Budidaya Jamur — Kontrol Kelembapan</h1>
-      <div class="sub">Sukosewu, Bojonegoro · ESP32 + SHT31 · AI Predictive Control</div>
+      <div class="eyebrow">KUMBUNG JAMUR · SUKOSEWU, BOJONEGORO</div>
+      <h1>Kendali Kabut</h1>
     </div>
     <div class="chips">
       <span class="chip"><span class="dot" id="dotNet"></span><span id="chipNet">menghubungkan…</span></span>
       <span class="chip"><span class="dot" id="dotSensor"></span>SHT31</span>
-      <span class="chip" id="chipClock">--:--:--</span>
+      <span class="chip mono" id="chipClock">--:--:--</span>
     </div>
   </header>
 
+  <!-- ================= BANNER ================= -->
   <div class="banner" id="banOffline"><span class="ic">📡</span><span>Terputus dari alat — mencoba menghubungkan ulang…</span></div>
   <div class="banner" id="banSensor"><span class="ic">⚠️</span><span>Sensor SHT31 tidak terbaca — kabut dimatikan (fail-safe). Periksa kabel I2C.</span></div>
-  <div class="banner" id="banAlarm"><span class="ic">🚨</span><span><b>Alarm air:</b> pengisian &gt; 5 menit, kran ditutup paksa. Periksa kran &amp; pelampung.</span><button onclick="ctl({dev:'alarm'})">Reset Alarm</button></div>
+  <div class="banner" id="banAlarm"><span class="ic">🚨</span><span><b>Alarm air:</b> pengisian lebih dari 5 menit, kran ditutup paksa. Periksa kran &amp; pelampung.</span><button id="btnResetAlarm">Reset alarm</button></div>
   <div class="banner warn" id="banSafety"><span class="ic">🛑</span><span><b>Safety:</b> kelembapan ≥ 90% — mist maker dimatikan otomatis.</span></div>
 
+  <!-- ================= HERO ================= -->
+  <section class="hero card">
+    <div class="fog" id="fog"><i></i><i></i><i></i></div>
+    <div class="hero-in">
+      <div class="eyebrow">KELEMBAPAN RUANG</div>
+      <div class="hero-row">
+        <div class="hero-val"><span id="heroRH">--</span><span class="unit">%</span></div>
+        <div class="hero-side">
+          <span class="badge" id="bRH">●&nbsp;menunggu data</span>
+          <div class="hero-target mono">target 70–90% · kabut <span id="heroMist">0</span>%</div>
+        </div>
+      </div>
+      <p class="ai"><span class="ai-ic">🧠</span><span id="aiTxt">Menunggu data sensor…</span></p>
+    </div>
+  </section>
+
   <!-- ================= GRAFIK ================= -->
-  <div class="card">
+  <section class="card">
     <div class="chart-head">
-      <h2>Kelembapan — 3 menit terakhir &amp; prediksi AI 5 menit ke depan</h2>
-      <div class="legend">
-        <span><i class="sw"></i>Kelembapan</span>
+      <h2>Riwayat 3 menit &amp; prediksi 5 menit</h2>
+      <div class="legend mono">
+        <span><i class="sw line"></i>Kelembapan</span>
         <span><i class="sw dash"></i>Prediksi AI</span>
         <span><i class="sw band"></i>Zona ideal 70–90%</span>
       </div>
     </div>
-    <div class="chart-box">
-      <canvas id="cv"></canvas>
-      <div id="tip"></div>
+    <div id="chart"></div>
+    <div id="chartFallback" class="chart-fallback" hidden>
+      Grafik membutuhkan koneksi internet (CDN ECharts). Data &amp; kontrol tetap berjalan normal.
     </div>
-  </div>
+  </section>
 
   <!-- ================= TILES ================= -->
   <div class="tiles">
     <div class="tile">
-      <div class="lbl">Kelembapan ruang</div>
-      <div class="val" id="vRH">--<small> %</small></div>
-      <div class="foot"><span class="badge good" id="bRH">●&nbsp;—</span></div>
-    </div>
-    <div class="tile">
-      <div class="lbl">Suhu ruang</div>
-      <div class="val" id="vT">--<small> °C</small></div>
+      <div class="lbl">SUHU RUANG</div>
+      <div class="val"><span id="vT">--</span><small> °C</small></div>
       <div class="foot" id="fT">sensor SHT31</div>
     </div>
     <div class="tile">
-      <div class="lbl">Prediksi kelembapan +5 menit</div>
-      <div class="val" id="vFc">--<small> %</small></div>
+      <div class="lbl">PREDIKSI +5 MENIT</div>
+      <div class="val"><span id="vFc">--</span><small> %</small></div>
       <div class="foot" id="fFc">model Holt (AI)</div>
     </div>
     <div class="tile">
-      <div class="lbl">Cuaca luar — Sukosewu</div>
+      <div class="lbl">CUACA LUAR — SUKOSEWU</div>
       <div class="val" id="vW">--</div>
       <div class="foot" id="fW">memuat…</div>
     </div>
+    <div class="tile">
+      <div class="lbl">AIR TANDON</div>
+      <div class="val" id="vAir">--</div>
+      <div class="foot" id="fAir">pelampung GPIO 26</div>
+    </div>
   </div>
-
-  <!-- ================= AI STATUS ================= -->
-  <div class="card ai"><span class="ic">🧠</span><span id="aiTxt">Menunggu data…</span></div>
 
   <!-- ================= KONTROL ================= -->
-  <div class="card">
-    <h2>Kontrol Aktuator</h2>
+  <section class="card">
+    <h2>Kendali aktuator</h2>
 
     <div class="ctl-row">
-      <div class="ctl-name"><b>💨 Mist Maker</b><div class="st" id="stMist">PWM 0%</div></div>
-      <div class="seg" id="segMist">
+      <div class="ctl-name">
+        <b>💨 Mist maker</b>
+        <div class="st">AUTO: AI prediktif · <span class="mono" id="stMist">PWM 0%</span></div>
+      </div>
+      <div class="seg" id="segMist" role="group" aria-label="Mode mist maker">
         <button data-m="auto">AUTO</button><button data-m="manual">MANUAL</button>
       </div>
       <div class="ctl-io">
-        <input type="range" id="slMist" min="0" max="100" value="0" disabled>
-        <span class="pct" id="pctMist">0%</span>
+        <input type="range" id="slMist" min="0" max="100" value="0" disabled aria-label="PWM mist maker">
+        <span class="pct mono" id="pctMist">0%</span>
       </div>
     </div>
 
     <div class="ctl-row">
-      <div class="ctl-name"><b>🌀 Kipas Penyebar</b><div class="st" id="stFan">mengikuti mist</div></div>
-      <div class="seg" id="segFan">
+      <div class="ctl-name">
+        <b>🌀 Kipas penyebar</b>
+        <div class="st">AUTO: ikut mist maker · <span id="stFan">mati</span></div>
+      </div>
+      <div class="seg" id="segFan" role="group" aria-label="Mode kipas">
         <button data-m="auto">AUTO</button><button data-m="manual">MANUAL</button>
       </div>
       <div class="ctl-io">
-        <label class="switch"><input type="checkbox" id="swFan" disabled><span class="slider"></span></label>
-        <div class="bar"><i id="barMist"></i></div>
+        <label class="switch"><input type="checkbox" id="swFan" disabled aria-label="Kipas"><span class="slider"></span></label>
+        <div class="bar" aria-hidden="true"><i id="barMist"></i></div>
       </div>
     </div>
 
     <div class="ctl-row">
-      <div class="ctl-name"><b>🚰 Kran Air</b><div class="st" id="stValve">air: —</div></div>
-      <div class="seg" id="segValve">
+      <div class="ctl-name">
+        <b>🚰 Kran air</b>
+        <div class="st">AUTO: ikut pelampung · <span id="stValve">kran tertutup</span></div>
+      </div>
+      <div class="seg" id="segValve" role="group" aria-label="Mode kran air">
         <button data-m="auto">AUTO</button><button data-m="manual">MANUAL</button>
       </div>
       <div class="ctl-io">
-        <label class="switch"><input type="checkbox" id="swValve" disabled><span class="slider"></span></label>
-        <span class="badge good" id="bWater">●&nbsp;—</span>
+        <label class="switch"><input type="checkbox" id="swValve" disabled aria-label="Kran air"><span class="slider"></span></label>
+        <span class="badge" id="bWater">●&nbsp;—</span>
       </div>
     </div>
-  </div>
+  </section>
 
-  <footer id="foot">—</footer>
+  <footer class="mono" id="foot">—</footer>
 </div>
 
-<script>
-"use strict";
-const $ = id => document.getElementById(id);
-const CSS = getComputedStyle(document.documentElement);
-const C = n => CSS.getPropertyValue(n).trim();
-
-let st = null;            // state terakhir dari alat
-let lastOk = 0;           // waktu fetch sukses terakhir
-let dragging = false;     // slider sedang ditarik
-let hoverX = null;        // posisi hover utk crosshair
-
-/* ---------------- API ---------------- */
-async function poll(){
-  try{
-    const r = await fetch('/api/data', {cache:'no-store'});
-    if(!r.ok) throw 0;
-    st = await r.json();
-    lastOk = Date.now();
-    render();
-  }catch(e){ renderOffline(); }
-}
-function ctl(p){
-  fetch('/api/control?' + new URLSearchParams(p), {method:'POST'})
-    .then(()=>poll()).catch(()=>{});
-}
-
-/* ---------------- render ---------------- */
-function fmt(v,d=1){ return (v==null||isNaN(v)) ? '--' : Number(v).toFixed(d); }
-function renderOffline(){
-  if(Date.now() - lastOk > 6000){
-    $('banOffline').classList.add('show');
-    $('dotNet').className = 'dot off';
-    $('chipNet').textContent = 'offline';
-  }
-}
-const WMOJI = c => c==0?'☀️':c<=2?'⛅':c==3?'☁️':c<=48?'🌫️':c<=57?'🌦️':c<=67?'🌧️':c<=77?'🌨️':c<=82?'🌧️':'⛈️';
-
-function render(){
-  if(!st) return;
-  $('banOffline').classList.remove('show');
-  $('dotNet').className = 'dot on';
-  $('chipNet').textContent = (st.sys.ap ? 'AP ' : 'WiFi ') + st.sys.ip;
-  $('chipClock').textContent = new Date().toLocaleTimeString('id-ID');
-
-  // banner
-  $('banSensor').classList.toggle('show', !st.ok);
-  $('banAlarm').classList.toggle('show', st.fillAlarm);
-  $('banSafety').classList.toggle('show', st.safety);
-  $('dotSensor').className = 'dot ' + (st.ok ? 'on' : 'off');
-
-  // tiles
-  $('vRH').innerHTML = fmt(st.rh) + '<small> %</small>';
-  $('vT').innerHTML  = fmt(st.t)  + '<small> °C</small>';
-  const b = $('bRH');
-  if(st.rh == null || !st.ok){ b.className='badge warn'; b.innerHTML='●&nbsp;tanpa data'; }
-  else if(st.rh >= 90){ b.className='badge crit'; b.innerHTML='▲&nbsp;terlalu lembap'; }
-  else if(st.rh >= 70){ b.className='badge good'; b.innerHTML='✔&nbsp;ideal (70–90%)'; }
-  else { b.className='badge warn'; b.innerHTML='▼&nbsp;di bawah ideal'; }
-
-  const fc = st.fc || [];
-  const fcEnd = fc.length ? fc[fc.length-1] : null;
-  $('vFc').innerHTML = fmt(fcEnd) + '<small> %</small>';
-  if(fcEnd != null && st.rh != null){
-    const d = fcEnd - st.rh;
-    $('fFc').textContent = (d>=0?'naik +':'turun ') + d.toFixed(1) + ' % dari sekarang';
-  }
-
-  if(st.w && st.w.ok){
-    $('vW').textContent = WMOJI(st.w.code) + ' ' + fmt(st.w.t) + '°C';
-    $('fW').textContent = st.w.desc + ' · RH ' + fmt(st.w.rh,0) + '% · ' + st.w.ageS + ' dtk lalu';
-  } else $('fW').textContent = 'belum ada data (cek internet)';
-
-  $('aiTxt').textContent = st.ai || '—';
-
-  // kontrol mist
-  seg('segMist', st.mist.mode);
-  const man = st.mist.mode === 'manual';
-  $('slMist').disabled = !man;
-  if(!dragging) $('slMist').value = man ? st.mist.man : st.mist.pct;
-  $('pctMist').textContent = Math.round(st.mist.pct) + '%';
-  $('stMist').textContent = 'PWM ' + Math.round(st.mist.pct) + '% (' + Math.round(st.mist.pct*1023/100) + '/1023)'
-                          + (st.safety ? ' · SAFETY CUT' : '');
-  $('barMist').style.width = st.mist.pct + '%';
-
-  // fan
-  seg('segFan', st.fan.mode);
-  $('swFan').disabled = st.fan.mode !== 'manual';
-  $('swFan').checked = st.fan.mode === 'manual' ? st.fan.man : st.fan.on;
-  $('stFan').textContent = st.fan.on ? 'menyala' : 'mati';
-
-  // valve
-  seg('segValve', st.valve.mode);
-  $('swValve').disabled = st.valve.mode !== 'manual';
-  $('swValve').checked = st.valve.mode === 'manual' ? st.valve.man : st.valve.on;
-  $('stValve').textContent = 'kran ' + (st.valve.on ? 'TERBUKA' : 'tertutup');
-  const bw = $('bWater');
-  if(st.waterFull){ bw.className='badge good'; bw.innerHTML='✔&nbsp;air penuh'; }
-  else { bw.className='badge warn'; bw.innerHTML='▼&nbsp;air kurang'; }
-
-  $('foot').textContent = 'IP ' + st.sys.ip + ' · RSSI ' + st.sys.rssi + ' dBm · heap ' +
-    Math.round(st.sys.heap/1024) + ' KB · uptime ' + upFmt(st.sys.upS) + ' · SistemKontrolKelembapanBudidayaJamur v1.0';
-
-  draw();
-}
-function upFmt(s){
-  if(s==null) return '--';
-  const h = Math.floor(s/3600), m = Math.floor(s%3600/60);
-  return (h? h+' jam ':'') + m + ' mnt';
-}
-function seg(id, mode){
-  $(id).querySelectorAll('button').forEach(bt =>
-    bt.classList.toggle('act', bt.dataset.m === mode));
-}
-
-/* ---------------- kontrol events ---------------- */
-[['segMist','mist'],['segFan','fan'],['segValve','valve']].forEach(([id,dev])=>{
-  $(id).querySelectorAll('button').forEach(bt =>
-    bt.addEventListener('click', ()=>ctl({dev, mode:bt.dataset.m})));
-});
-$('slMist').addEventListener('input', e=>{ dragging = true; $('pctMist').textContent = e.target.value + '%'; });
-$('slMist').addEventListener('change', e=>{ dragging = false; ctl({dev:'mist', val:e.target.value}); });
-$('swFan').addEventListener('change', e=>ctl({dev:'fan', val:e.target.checked?1:0}));
-$('swValve').addEventListener('change', e=>ctl({dev:'valve', val:e.target.checked?1:0}));
-
-/* ================= GRAFIK CANVAS =================
-   Domain waktu: -180 dtk … +300 dtk, garis SEKARANG di tengah.
-   Panel atas: kelembapan (riwayat solid + prediksi putus-putus).
-   Panel bawah: suhu (small-multiple, sumbu sendiri — bukan dual axis). */
-const cv = $('cv'), ctx = cv.getContext('2d');
-const T0 = -180, T1 = 300;
-
-function draw(){
-  const dpr = window.devicePixelRatio || 1;
-  const W = cv.clientWidth, H = cv.clientHeight;
-  if(cv.width !== W*dpr || cv.height !== H*dpr){ cv.width = W*dpr; cv.height = H*dpr; }
-  ctx.setTransform(dpr,0,0,dpr,0,0);
-  ctx.clearRect(0,0,W,H);
-  if(!st) return;
-
-  const padL = 44, padR = 12;
-  const mTop = 30,  mBot = H*0.60;              // panel kelembapan
-  const tTop = mBot + 34, tBot = H - 24;        // panel suhu
-  const X = t => padL + (t - T0)/(T1 - T0) * (W - padL - padR);
-
-  // ----- skala RH -----
-  const hist = st.histH || [], histT = st.histT || [], fc = st.fc || [];
-  let lo = 50;
-  const allH = hist.concat(fc).filter(v=>v!=null);
-  if(allH.length) lo = Math.min(50, Math.floor((Math.min(...allH)-3)/10)*10);
-  lo = Math.max(0, lo);
-  const YH = v => mBot - (v - lo)/(100 - lo) * (mBot - mTop);
-
-  // ----- skala suhu -----
-  const allT = histT.filter(v=>v!=null);
-  let tLo = 20, tHi = 35;
-  if(allT.length){
-    tLo = Math.floor(Math.min(...allT) - 1);
-    tHi = Math.ceil(Math.max(...allT) + 1);
-    if(tHi - tLo < 4){ const c=(tHi+tLo)/2; tLo = c-2; tHi = c+2; }
-  }
-  const YT = v => tBot - (v - tLo)/(tHi - tLo) * (tBot - tTop);
-
-  const xNow = X(0);
-
-  // tint area prediksi
-  ctx.fillStyle = 'rgba(57,135,229,0.05)';
-  ctx.fillRect(xNow, mTop, X(T1)-xNow, mBot-mTop);
-
-  // pita ideal 70–90
-  ctx.fillStyle = 'rgba(12,163,12,0.09)';
-  ctx.fillRect(padL, YH(90), W-padL-padR, YH(70)-YH(90));
-
-  // grid horizontal RH + label
-  ctx.font = '10px system-ui'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
-  for(let v = lo; v <= 100; v += 10){
-    ctx.strokeStyle = C('--grid'); ctx.lineWidth = 1; ctx.setLineDash([]);
-    line(padL, YH(v), W-padR, YH(v));
-    ctx.fillStyle = C('--muted');
-    ctx.fillText(v + '%', padL-6, YH(v));
-  }
-  // garis ambang 70 / 80 / 90
-  thresh(YH(90), C('--crit'), [4,4], .9);
-  thresh(YH(80), C('--muted'), [2,4], .8);
-  thresh(YH(70), C('--warn'), [4,4], .7);
-
-  // grid vertikal waktu (tiap 60 dtk) — dua panel
-  ctx.textAlign = 'center'; ctx.textBaseline = 'top';
-  for(let t = T0; t <= T1; t += 60){
-    if(t === 0) continue;
-    ctx.strokeStyle = C('--grid'); ctx.setLineDash([]);
-    line(X(t), mTop, X(t), mBot); line(X(t), tTop, X(t), tBot);
-    ctx.fillStyle = C('--muted');
-    ctx.fillText((t<0? '-' : '+') + Math.abs(t/60) + 'm', X(t), tBot+6);
-  }
-
-  // ----- riwayat RH (kiri garis) -----
-  const n = hist.length, step = st.histStep || 2;
-  const hx = i => X(-(n-1-i)*step);
-  path(hist, hx, YH, C('--s1'), 2.2, []);
-
-  // ----- prediksi (kanan garis, putus-putus) -----
-  if(fc.length && st.rh != null){
-    const pts = [st.rh, ...fc];
-    const fx = i => X(i * (st.fcStep||10));
-    path(pts, fx, YH, C('--s1'), 2, [6,5]);
-    // titik & label ujung prediksi
-    const ex = fx(pts.length-1), ey = YH(pts[pts.length-1]);
-    ctx.setLineDash([]);
-    ctx.beginPath(); ctx.arc(ex-2, ey, 3.5, 0, 7);
-    ctx.strokeStyle = C('--s1'); ctx.lineWidth = 2; ctx.stroke();
-    label('≈' + fmt(pts[pts.length-1]) + '%', ex-8, ey-14, C('--ink2'), 'right');
-  }
-
-  // titik nilai sekarang
-  if(st.rh != null && n){
-    const y = YH(hist[n-1] ?? st.rh);
-    ctx.setLineDash([]);
-    ctx.beginPath(); ctx.arc(xNow, y, 4, 0, 7);
-    ctx.fillStyle = C('--s1'); ctx.fill();
-    ctx.lineWidth = 2; ctx.strokeStyle = C('--surface'); ctx.stroke();
-    label(fmt(st.rh) + '%', xNow-8, y-16, C('--ink'), 'right', '600 12px system-ui');
-  }
-
-  // label area
-  label('PREDIKSI AI →', W-padR, mTop-18, C('--muted'), 'right', '600 9.5px system-ui');
-
-  // ----- panel suhu -----
-  ctx.textAlign='left';
-  label('SUHU (°C)', padL, tTop-16, C('--muted'), 'left', '600 9.5px system-ui');
-  ctx.textAlign = 'right'; ctx.textBaseline='middle'; ctx.fillStyle = C('--muted'); ctx.font='10px system-ui';
-  ctx.strokeStyle = C('--grid'); ctx.setLineDash([]);
-  [tLo, tHi].forEach(v=>{ line(padL, YT(v), W-padR, YT(v)); ctx.fillText(v+'°', padL-6, YT(v)); });
-  path(histT, hx, YT, C('--s2'), 1.8, []);
-  if(st.t != null && n){
-    label(fmt(st.t)+'°C', xNow-8, YT(histT[n-1] ?? st.t)-12, C('--ink2'), 'right');
-  }
-
-  // ----- garis SEKARANG -----
-  ctx.setLineDash([]); ctx.strokeStyle = C('--ink2'); ctx.lineWidth = 1.4;
-  line(xNow, mTop-4, xNow, tBot);
-  // pil label
-  const pw = 74;
-  ctx.fillStyle = C('--axis');
-  rr(xNow-pw/2, 4, pw, 17, 9); ctx.fill();
-  label('SEKARANG', xNow, 8, C('--ink'), 'center', '600 9.5px system-ui');
-
-  // ----- crosshair hover -----
-  if(hoverX != null && hoverX > padL && hoverX < W-padR) crosshair(hoverX, X, YH, YT, hist, histT, fc, n, step, mTop, tBot);
-  else $('tip').style.display = 'none';
-}
-
-function line(x1,y1,x2,y2){ ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); }
-function rr(x,y,w,h,r){ ctx.beginPath(); ctx.roundRect(x,y,w,h,r); }
-function thresh(y, col, dash, a){
-  ctx.save(); ctx.globalAlpha = a; ctx.strokeStyle = col; ctx.lineWidth = 1; ctx.setLineDash(dash);
-  line(44, y, cv.clientWidth-12, y); ctx.restore();
-}
-function label(txt, x, y, col, align, font){
-  ctx.save(); ctx.font = font || '11px system-ui'; ctx.fillStyle = col;
-  ctx.textAlign = align || 'left'; ctx.textBaseline = 'top'; ctx.fillText(txt, x, y); ctx.restore();
-}
-function path(arr, xf, yf, col, w, dash){
-  ctx.strokeStyle = col; ctx.lineWidth = w; ctx.setLineDash(dash);
-  ctx.lineJoin = 'round'; ctx.lineCap = 'round';
-  ctx.beginPath();
-  let pen = false;
-  for(let i=0;i<arr.length;i++){
-    const v = arr[i];
-    if(v==null || isNaN(v)){ pen = false; continue; }
-    if(!pen){ ctx.moveTo(xf(i), yf(v)); pen = true; }
-    else ctx.lineTo(xf(i), yf(v));
-  }
-  ctx.stroke(); ctx.setLineDash([]);
-}
-
-/* crosshair + tooltip */
-function crosshair(px, X, YH, YT, hist, histT, fc, n, step, top, bot){
-  const W = cv.clientWidth;
-  const t = T0 + (px-44)/(W-44-12)*(T1-T0);   // detik relatif
-  ctx.save(); ctx.globalAlpha=.5; ctx.strokeStyle=C('--muted'); ctx.setLineDash([3,3]); ctx.lineWidth=1;
-  line(px, top, px, bot); ctx.restore();
-
-  let html = '', y = top;
-  if(t <= 0 && n){
-    const i = Math.round(n-1 + t/step);
-    if(i>=0 && i<n && hist[i]!=null){
-      html = '<b>' + secFmt(t) + '</b><br>💧 ' + fmt(hist[i]) + ' % &nbsp; 🌡 ' + fmt(histT[i]) + ' °C';
-      dot(X(-(n-1-i)*step), YH(hist[i]), C('--s1'));
-      y = YH(hist[i]);
-    }
-  } else if(t > 0 && fc.length){
-    const i = Math.min(fc.length-1, Math.max(0, Math.round(t/(st.fcStep||10))-1));
-    html = '<b>' + secFmt(t) + '</b><br>💧 prediksi ' + fmt(fc[i]) + ' %';
-    dot(X((i+1)*(st.fcStep||10)), YH(fc[i]), C('--s1'));
-    y = YH(fc[i]);
-  }
-  const tip = $('tip');
-  if(html){
-    tip.innerHTML = html; tip.style.display = 'block';
-    const bw = tip.offsetWidth;
-    tip.style.left = Math.min(Math.max(px - bw/2, 4), W - bw - 4) + 'px';
-    tip.style.top  = Math.max(4, y - 58) + 'px';
-  } else tip.style.display = 'none';
-}
-function dot(x,y,col){
-  ctx.setLineDash([]); ctx.beginPath(); ctx.arc(x,y,4,0,7);
-  ctx.fillStyle = col; ctx.fill(); ctx.lineWidth=2; ctx.strokeStyle=C('--surface'); ctx.stroke();
-}
-function secFmt(t){
-  const a = Math.abs(Math.round(t)), m = Math.floor(a/60), s = a%60;
-  return (t<=0 ? '-' : '+') + m + 'm ' + s + 's';
-}
-
-cv.addEventListener('pointermove', e=>{
-  const r = cv.getBoundingClientRect();
-  hoverX = e.clientX - r.left;
-  draw();
-});
-cv.addEventListener('pointerleave', ()=>{ hoverX = null; draw(); });
-new ResizeObserver(()=>draw()).observe(cv);
-
-/* jam header berjalan tiap detik */
-setInterval(()=>{ $('chipClock').textContent = new Date().toLocaleTimeString('id-ID');
-  if(Date.now()-lastOk > 6000) renderOffline(); }, 1000);
-
-poll();
-setInterval(poll, 2000);
-</script>
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js" defer></script>
+<script src="/app.js" defer></script>
 </body>
 </html>

@@ -465,14 +465,31 @@ void fetchWeather() {
 }
 
 // ================== WEB SERVER ==================
-void handleIndex() {
-  File f = LittleFS.open("/index.html", "r");
-  if (!f) {
-    server.send(500, "text/plain", "index.html tidak ada - upload image LittleFS dulu");
-    return;
-  }
-  server.streamFile(f, "text/html");
+String tipeKonten(const String& path) {
+  if (path.endsWith(".html")) return "text/html";
+  if (path.endsWith(".css"))  return "text/css";
+  if (path.endsWith(".js"))   return "application/javascript";
+  if (path.endsWith(".json")) return "application/json";
+  if (path.endsWith(".svg"))  return "image/svg+xml";
+  if (path.endsWith(".png"))  return "image/png";
+  if (path.endsWith(".ico"))  return "image/x-icon";
+  return "text/plain";
+}
+
+// Sajikan file statis dari LittleFS (index.html, style.css, app.js, ...)
+bool kirimFile(String path) {
+  if (path.endsWith("/")) path += "index.html";
+  if (!LittleFS.exists(path)) return false;
+  File f = LittleFS.open(path, "r");
+  if (!f) return false;
+  server.streamFile(f, tipeKonten(path));
   f.close();
+  return true;
+}
+
+void handleIndex() {
+  if (!kirimFile("/index.html"))
+    server.send(500, "text/plain", "index.html tidak ada - upload image LittleFS dulu");
 }
 
 void handleData() {
@@ -662,7 +679,9 @@ void setup() {
   server.on("/", HTTP_GET, handleIndex);
   server.on("/api/data", HTTP_GET, handleData);
   server.on("/api/control", HTTP_POST, handleControl);
-  server.onNotFound([]() { server.send(404, "text/plain", "404"); });
+  server.onNotFound([]() {
+    if (!kirimFile(server.uri())) server.send(404, "text/plain", "404");
+  });
   server.begin();
   lcdBoot("Web server: OK");
   Serial.println("[BOOT] Web server aktif di port 80");
