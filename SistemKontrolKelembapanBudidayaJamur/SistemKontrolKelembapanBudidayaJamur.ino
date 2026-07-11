@@ -40,6 +40,7 @@
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <WebServer.h>
+#include <ESPmDNS.h>
 #include <FS.h>
 #include <LittleFS.h>
 #include <Wire.h>
@@ -53,6 +54,7 @@ const char* WIFI_SSID = "robot";
 const char* WIFI_PASS = "12345678";
 const char* AP_SSID   = "JamurControl";   // fallback bila WiFi gagal
 const char* AP_PASS   = "jamur12345";
+const char* MDNS_NAME = "bagus";          // dashboard: http://bagus.local
 
 // ================== KONFIGURASI PIN ==================
 #define PIN_MIST    25
@@ -268,9 +270,15 @@ void lcdRuntime() {
       }
       break;
     }
-    default: { // jaringan + jam
-      IPAddress ip = staOk ? WiFi.localIP() : WiFi.softAPIP();
-      snprintf(l1, sizeof(l1), "%s", ip.toString().c_str());
+    default: { // jaringan + jam (IP bergantian dengan bagus.local)
+      static bool showMdns = false;
+      showMdns = !showMdns;
+      if (showMdns) {
+        snprintf(l1, sizeof(l1), "bagus.local");
+      } else {
+        IPAddress ip = staOk ? WiFi.localIP() : WiFi.softAPIP();
+        snprintf(l1, sizeof(l1), "%s", ip.toString().c_str());
+      }
       time_t now = time(nullptr);
       if (now > 1600000000) {
         struct tm tmInfo;
@@ -641,6 +649,7 @@ void setup() {
   delay(400);
 
   // WiFi
+  WiFi.setHostname(MDNS_NAME);   // nama alat di router (DHCP)
   WiFi.mode(WIFI_STA);
   WiFi.setSleep(false);
   WiFi.begin(WIFI_SSID, WIFI_PASS);
@@ -685,6 +694,16 @@ void setup() {
   server.begin();
   lcdBoot("Web server: OK");
   Serial.println("[BOOT] Web server aktif di port 80");
+  delay(600);
+
+  // mDNS: dashboard bisa dibuka lewat http://bagus.local
+  if (MDNS.begin(MDNS_NAME)) {
+    MDNS.addService("http", "tcp", 80);
+    Serial.println("[BOOT] mDNS aktif: http://bagus.local");
+    lcdBoot("bagus.local");
+  } else {
+    Serial.println("[BOOT] mDNS gagal dimulai");
+  }
   delay(600);
 
   // Data awal

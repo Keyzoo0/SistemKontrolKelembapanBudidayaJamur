@@ -131,7 +131,7 @@ function render(){
   badge($('bWater'), st.waterFull ? 'good' : 'warn',
         st.waterFull ? '✔&nbsp;air penuh' : '▼&nbsp;air kurang');
 
-  $('foot').textContent = 'IP ' + st.sys.ip + ' · RSSI ' + st.sys.rssi + ' dBm · heap ' +
+  $('foot').textContent = 'bagus.local · IP ' + st.sys.ip + ' · RSSI ' + st.sys.rssi + ' dBm · heap ' +
     Math.round(st.sys.heap / 1024) + ' KB · uptime ' + upFmt(st.sys.upS) +
     ' · SistemKontrolKelembapanBudidayaJamur v2.0';
 

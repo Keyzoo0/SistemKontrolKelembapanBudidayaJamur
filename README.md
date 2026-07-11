@@ -85,7 +85,9 @@ data/
 ## Cara pakai
 
 1. Nyalakan alat — LCD menampilkan proses setup (sensor, WiFi, web server, IP).
-2. Buka IP yang tampil di LCD dari browser (HP/laptop satu jaringan WiFi).
+2. Buka **http://bagus.local** dari browser (HP/laptop satu jaringan WiFi).
+   Bila `.local` tidak terbuka (sebagian HP Android), pakai IP yang tampil
+   bergantian di LCD halaman jaringan.
 3. Dashboard menampilkan grafik, status semua aktuator, cuaca luar, dan keputusan AI.
 4. Geser mode ke **MANUAL** bila ingin mengendalikan mist/fan/kran sendiri —
    safety RH ≥ 90% tetap aktif.
