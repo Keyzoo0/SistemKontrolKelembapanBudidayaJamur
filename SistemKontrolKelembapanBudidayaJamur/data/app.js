@@ -95,10 +95,21 @@ function render(){
     const d = fcEnd - st.rh;
     $('fFc').textContent = (d >= 0 ? 'naik +' : 'turun ') + d.toFixed(1) + ' % dari sekarang';
   }
+  // cuaca daerah di hero
   if (st.w && st.w.ok){
-    $('vW').textContent = WMOJI(st.w.code) + ' ' + fmt(st.w.t) + '°C';
-    $('fW').textContent = st.w.desc + ' · RH ' + fmt(st.w.rh, 0) + '% · ' + st.w.ageS + ' dtk lalu';
-  } else $('fW').textContent = 'belum ada data (cek internet)';
+    $('hcEmoji').textContent = WMOJI(st.w.code);
+    $('hcT').textContent = fmt(st.w.t) + '°C';
+    $('hcRH').textContent = fmt(st.w.rh, 0) + '%';
+    $('hcDesc').textContent = st.w.desc;
+    $('hcMeta').textContent = 'Open-Meteo · diperbarui ' + st.w.ageS + ' dtk lalu';
+  } else {
+    $('hcDesc').textContent = 'belum ada data (cek internet alat)';
+  }
+
+  // tile mist maker
+  $('vMist').textContent = Math.round(st.mist.pct);
+  $('fMist').textContent = (st.mist.mode === 'auto' ? 'AUTO (AI)' : 'MANUAL') +
+    ' · kipas ' + (st.fan.on ? 'berputar' : 'mati') + (st.safety ? ' · SAFETY CUT' : '');
   $('vAir').textContent = st.waterFull ? 'Penuh' : 'Kurang';
   $('fAir').textContent = st.fillAlarm ? 'ALARM — kran ditutup paksa'
                         : (st.valve.on ? 'kran terbuka · mengisi…' : 'kran tertutup');

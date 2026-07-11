@@ -73,6 +73,9 @@ Atau jalankan `./upload.sh` (mengerjakan semua langkah di atas).
 
 Dari Arduino IDE: upload sketch biasa + plugin *LittleFS Data Upload* untuk folder `data/`.
 
+Mengembangkan dashboard tanpa alat: `python3 tools/mock-server.py` lalu buka
+http://127.0.0.1:8791 (API `/api/data` ditiru dengan data palsu).
+
 Isi folder `data/` (dashboard, disajikan dari LittleFS):
 
 ```

@@ -81,6 +81,20 @@ header h1{font-family:var(--f-disp);font-size:clamp(17px,2.4vw,23px);font-weight
 .hero-val .unit{font-size:.38em;font-weight:600;color:var(--sage);margin-left:4px}
 .hero-side{display:flex;flex-direction:column;gap:8px;padding-bottom:10px}
 .hero-target{font-size:11px;color:var(--muted)}
+
+/* panel cuaca daerah di ruang kanan hero */
+.hero-cuaca{margin-left:auto;text-align:right;display:flex;flex-direction:column;
+  gap:4px;padding:2px 0 10px;align-items:flex-end}
+.hc-main{font-family:var(--f-disp);font-size:clamp(22px,3vw,32px);font-weight:700;
+  letter-spacing:-.02em;line-height:1.1;display:flex;align-items:center;gap:9px}
+.hc-main .em{font-size:.82em}
+.hc-sep{color:var(--muted);font-weight:400}
+.hc-desc{color:var(--sage);font-size:13px}
+.hc-meta{font-size:10px;color:var(--muted);letter-spacing:.06em}
+@media (max-width:760px){
+  .hero-cuaca{margin-left:0;align-items:flex-start;text-align:left;width:100%;
+    border-top:1px solid var(--grid);padding-top:12px;margin-top:4px}
+}
 .ai{display:flex;gap:9px;margin-top:14px;font-size:13.5px;color:var(--sage);
   border-top:1px solid var(--grid);padding-top:12px}
 .ai-ic{flex:none}
