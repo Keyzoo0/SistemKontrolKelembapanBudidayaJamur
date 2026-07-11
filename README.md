@@ -1,4 +1,4 @@
-# Sistem Kontrol Kelembapan Budidaya Jamur (ESP32)
+# Sistem Kendali Kelembapan Budidaya Jamur Berbasis Artificial Intelligence (ESP32)
 
 Sistem kontrol kelembapan otomatis untuk kumbung jamur berbasis **ESP32 DevKit V1**
 dengan **AI predictive control**: kelembapan diramal 5 menit ke depan (model Holt /

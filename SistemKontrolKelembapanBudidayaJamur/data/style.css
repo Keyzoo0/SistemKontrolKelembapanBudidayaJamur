@@ -47,7 +47,8 @@ button{font-family:var(--f-body)}
 
 /* ---------------- header ---------------- */
 header{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;justify-content:space-between;padding:4px 2px}
-header h1{font-family:var(--f-disp);font-size:26px;font-weight:700;letter-spacing:-.01em;margin-top:3px}
+header h1{font-family:var(--f-disp);font-size:clamp(17px,2.4vw,23px);font-weight:700;
+  letter-spacing:-.01em;margin-top:3px;line-height:1.25;max-width:640px}
 .chips{display:flex;gap:8px;flex-wrap:wrap}
 .chip{display:inline-flex;align-items:center;gap:7px;background:var(--tanah);
   border:1px solid var(--border);border-radius:999px;padding:5px 11px;
