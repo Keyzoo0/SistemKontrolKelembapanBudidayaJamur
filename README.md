@@ -26,12 +26,13 @@ internet).
   - RH < 70% → kabut 100%
   - 80–90% → PWM diperlambat linier
   - RH ≥ 90% → kabut **mati** (berlaku juga di mode manual)
-- 🌤️ **Cuaca luar** (Open-Meteo, Sukosewu Bojonegoro) sebagai feedforward: makin panas & kering, base PWM naik.
+- 🌤️ **Cuaca luar** (Open-Meteo) sebagai feedforward: makin panas & kering, base PWM naik.
+- 📍 **Lokasi ramalan bisa dipilih** dari web — Sukosewu (Bojonegoro) atau Politeknik Negeri Malang — dan tersimpan permanen (NVS).
 - 🌀 **Fan penyebar kabut** otomatis mengikuti mist (PWM > 0 → fan ON).
 - 🚰 **Pengisian air otomatis**: pelampung LOW → valve buka, plus alarm anti-banjir (timeout isi 5 menit).
 - 🎛️ **Mode manual** per aktuator dari web (slider PWM mist, saklar fan & kran).
 - 📟 **LCD 16x2 I2C**: tampilan setup saat boot, lalu 4 halaman info bergantian.
-- 📶 **AP fallback**: WiFi gagal → ESP32 membuka hotspot `JamurControl` (pass `jamur12345`).
+- 📶 **Reconnect otomatis**: WiFi putus → alat terus mencoba menghubungkan ulang; kontrol kelembapan tetap berjalan walau offline.
 - ⛑️ **Fail-safe**: sensor gagal → kabut mati; timeout NTP/cuaca tidak mengganggu kontrol.
 
 ## Hardware
@@ -51,7 +52,7 @@ internet).
 
 - Board: **ESP32 Dev Module** (DevKit V1), flash 4MB
 - Partition Scheme: **Huge APP (3MB No OTA/1MB SPIFFS)** — filesystem dipakai sebagai LittleFS
-- WiFi: SSID `robot`, password `12345678` (ubah di bagian atas sketch)
+- WiFi: salin `SistemKontrolKelembapanBudidayaJamur/secrets.h.example` menjadi `secrets.h` lalu isi SSID & password (file `secrets.h` tidak ikut ke git)
 
 Library (Library Manager): `ArduinoJson` (v7), `Adafruit SHT31 Library`, `LiquidCrystal I2C`.
 
@@ -102,6 +103,7 @@ data/
 | `/` | GET | Dashboard (LittleFS) |
 | `/api/data` | GET | JSON: sensor, riwayat 3 mnt, prediksi 5 mnt, cuaca, status aktuator |
 | `/api/control?dev=mist&mode=manual&val=60` | POST | Mode/nilai aktuator (`mist`,`fan`,`valve`) |
+| `/api/control?dev=lokasi&val=0\|1` | POST | Ganti lokasi ramalan (0 = Bojonegoro, 1 = Polinema) |
 | `/api/control?dev=alarm` | POST | Reset alarm pengisian air |
 
 ## Cara kerja AI

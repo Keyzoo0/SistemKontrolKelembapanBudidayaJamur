@@ -16,7 +16,7 @@
   <!-- ================= HEADER ================= -->
   <header>
     <div>
-      <div class="eyebrow">KUMBUNG JAMUR · SUKOSEWU, BOJONEGORO</div>
+      <div class="eyebrow">KUMBUNG JAMUR · MONITORING &amp; KENDALI</div>
       <h1>Sistem Kendali Kelembapan Budidaya Jamur<br>Berbasis Artificial Intelligence</h1>
     </div>
     <div class="chips">
@@ -44,10 +44,13 @@
           <div class="hero-target mono">target 70–90% · kabut <span id="heroMist">0</span>%</div>
         </div>
         <div class="hero-cuaca">
-          <div class="eyebrow">CUACA LUAR · SUKOSEWU</div>
+          <div class="eyebrow">CUACA LUAR · <span id="hcLok">—</span></div>
           <div class="hc-main"><span class="em" id="hcEmoji">🌡</span><span id="hcT">--°C</span><span class="hc-sep">·</span>RH <span id="hcRH">--%</span></div>
           <div class="hc-desc" id="hcDesc">menunggu data cuaca…</div>
           <div class="hc-meta mono" id="hcMeta">Open-Meteo · tiap 5 menit</div>
+          <div class="seg mini" id="segLok" role="group" aria-label="Lokasi ramalan">
+            <button data-l="0">Bojonegoro</button><button data-l="1">Polinema</button>
+          </div>
         </div>
       </div>
       <p class="ai"><span class="ai-ic">🧠</span><span id="aiTxt">Menunggu data sensor…</span></p>

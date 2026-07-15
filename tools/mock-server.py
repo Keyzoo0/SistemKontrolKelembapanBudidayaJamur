@@ -27,8 +27,9 @@ def data():
         "ai": "AI: prediksi 78.4% (target 80%) - kabut 62%",
         "histStep": 2, "histT": hist_t, "histH": hist_h,
         "fcStep": 10, "fc": fc,
-        "w": {"ok": True, "t": 24.5, "rh": 78.0, "code": 2, "desc": "Berawan Sebagian", "ageS": 84},
-        "sys": {"ip": "192.168.143.247", "rssi": -58, "heap": 191234, "upS": 5460, "time": 0, "ap": False},
+        "w": {"ok": True, "t": 24.5, "rh": 78.0, "code": 2, "desc": "Berawan Sebagian", "ageS": 84,
+              "lok": 0, "nama": "Sukosewu, Bojonegoro"},
+        "sys": {"ip": "192.168.143.247", "rssi": -58, "heap": 191234, "upS": 5460, "time": 0},
     }
 
 class H(http.server.SimpleHTTPRequestHandler):

@@ -45,15 +45,13 @@
 #include <LittleFS.h>
 #include <Wire.h>
 #include <time.h>
+#include <Preferences.h>
 #include <ArduinoJson.h>
 #include <Adafruit_SHT31.h>
 #include <LiquidCrystal_I2C.h>
 
 // ================== KONFIGURASI WIFI ==================
-const char* WIFI_SSID = "robot";
-const char* WIFI_PASS = "12345678";
-const char* AP_SSID   = "JamurControl";   // fallback bila WiFi gagal
-const char* AP_PASS   = "jamur12345";
+#include "secrets.h"   // WIFI_SSID & WIFI_PASS (salin dari secrets.h.example)
 const char* MDNS_NAME = "bagus";          // dashboard: http://bagus.local
 
 // ================== KONFIGURASI PIN ==================
@@ -96,17 +94,25 @@ const unsigned long WEATHER_MS   = 300000;  // cuaca tiap 5 menit
 const unsigned long WIFI_CHK_MS  = 10000;
 const unsigned long FILL_TIMEOUT_MS = 300000; // 5 menit isi terus = alarm
 
-// Cuaca luar: Sukosewu, Bojonegoro (Open-Meteo)
-const char* WEATHER_URL =
+// Lokasi ramalan cuaca (Open-Meteo) — dipilih dari web, tersimpan di NVS
+struct Lokasi { const char* nama; float lat; float lon; };
+const Lokasi LOKASI[] = {
+  { "Sukosewu, Bojonegoro",     -7.160f, 111.890f },
+  { "Politeknik Negeri Malang", -7.946f, 112.615f },
+};
+const int N_LOKASI = sizeof(LOKASI) / sizeof(LOKASI[0]);
+
+const char* WEATHER_URL_FMT =
   "https://api.open-meteo.com/v1/forecast"
-  "?latitude=-7.16&longitude=111.89"
+  "?latitude=%.3f&longitude=%.3f"
   "&current=temperature_2m,relative_humidity_2m,weather_code"
-  "&timezone=Asia%2FJakarta";
+  "&timezone=Asia%%2FJakarta";
 
 // ================== OBJEK GLOBAL ==================
 Adafruit_SHT31    sht;
 LiquidCrystal_I2C* lcd = nullptr;
 WebServer         server(80);
+Preferences       prefs;
 
 // ================== STATE SENSOR & LOG ==================
 const int HIST_N = 90;            // 90 titik x 2 dtk = 3 menit
@@ -148,11 +154,13 @@ float  wT = NAN, wRH = NAN;
 int    wCode = -1;
 String wDesc = "-";
 unsigned long wAtMs = 0;
+int    lokasiIdx = 0;      // indeks LOKASI[] aktif
+bool   wantFetch = false;  // minta ambil cuaca segera (setelah ganti lokasi)
 
 // ================== STATE JARINGAN ==================
-bool staOk = false;
-bool apOn  = false;
-unsigned long staLostMs = 0;
+bool staOk  = false;
+bool ntpSet = false;
+bool mdnsOn = false;
 
 // Timer loop
 unsigned long tSensor = 0, tWater = 0, tLcd = 0, tWeather = 0, tWifi = 0;
@@ -275,9 +283,10 @@ void lcdRuntime() {
       showMdns = !showMdns;
       if (showMdns) {
         snprintf(l1, sizeof(l1), "bagus.local");
+      } else if (staOk) {
+        snprintf(l1, sizeof(l1), "%s", WiFi.localIP().toString().c_str());
       } else {
-        IPAddress ip = staOk ? WiFi.localIP() : WiFi.softAPIP();
-        snprintf(l1, sizeof(l1), "%s", ip.toString().c_str());
+        snprintf(l1, sizeof(l1), "WiFi: mencoba...");
       }
       time_t now = time(nullptr);
       if (now > 1600000000) {
@@ -443,13 +452,15 @@ void tickWater() {
 // ================== CUACA (OPEN-METEO) ==================
 void fetchWeather() {
   if (WiFi.status() != WL_CONNECTED) return;
-  Serial.println("[CUACA] Mengambil data Open-Meteo...");
+  char url[224];
+  snprintf(url, sizeof(url), WEATHER_URL_FMT, LOKASI[lokasiIdx].lat, LOKASI[lokasiIdx].lon);
+  Serial.printf("[CUACA] Mengambil data %s...\n", LOKASI[lokasiIdx].nama);
 
   WiFiClientSecure client;
   client.setInsecure();               // API publik, tanpa verifikasi sertifikat
   HTTPClient http;
   http.setTimeout(7000);
-  if (!http.begin(client, WEATHER_URL)) return;
+  if (!http.begin(client, url)) return;
 
   int code = http.GET();
   if (code == HTTP_CODE_OK) {
@@ -462,7 +473,7 @@ void fetchWeather() {
       wDesc = artiKodeCuaca(wCode);
       wOk   = true;
       wAtMs = millis();
-      Serial.printf("[CUACA] Sukosewu: %.1fC %.0f%% - %s\n", wT, wRH, wDesc.c_str());
+      Serial.printf("[CUACA] %s: %.1fC %.0f%% - %s\n", LOKASI[lokasiIdx].nama, wT, wRH, wDesc.c_str());
     } else {
       Serial.printf("[CUACA] Parsing gagal: %s\n", err.c_str());
     }
@@ -547,15 +558,16 @@ void handleData() {
   w["code"] = wCode;
   w["desc"] = wDesc;
   w["ageS"] = wOk ? (uint32_t)((millis() - wAtMs) / 1000) : 0;
+  w["lok"]  = lokasiIdx;
+  w["nama"] = LOKASI[lokasiIdx].nama;
 
   JsonObject sys = doc["sys"].to<JsonObject>();
-  sys["ip"]   = staOk ? WiFi.localIP().toString() : WiFi.softAPIP().toString();
+  sys["ip"]   = WiFi.localIP().toString();
   sys["rssi"] = staOk ? WiFi.RSSI() : 0;
   sys["heap"] = (uint32_t)ESP.getFreeHeap();
   sys["upS"]  = (uint32_t)(millis() / 1000);
   time_t nowT = time(nullptr);
   sys["time"] = (nowT > 1600000000) ? (uint32_t)nowT : 0;
-  sys["ap"]   = apOn;
 
   String out;
   out.reserve(4096);
@@ -576,6 +588,15 @@ void handleControl() {
   } else if (dev == "valve") {
     if (server.hasArg("mode")) valveMode = server.arg("mode") == "manual" ? MODE_MANUAL : MODE_AUTO;
     if (server.hasArg("val"))  valveManualOn = server.arg("val") == "1";
+  } else if (dev == "lokasi") {
+    int v = server.arg("val").toInt();
+    if (v >= 0 && v < N_LOKASI && v != lokasiIdx) {
+      lokasiIdx = v;
+      prefs.putInt("lokasi", lokasiIdx);
+      wOk = false;              // data lama tidak berlaku utk lokasi baru
+      wantFetch = true;         // ambil segera di loop berikutnya
+      Serial.printf("[CUACA] Lokasi ramalan diganti: %s\n", LOKASI[lokasiIdx].nama);
+    }
   } else if (dev == "alarm") {
     fillAlarm = false;
     Serial.println("[AIR] Alarm pengisian direset lewat web");
@@ -590,28 +611,44 @@ void handleControl() {
 }
 
 // ================== WIFI ==================
+// Dipanggil sekali setelah WiFi tersambung (saat boot atau saat reconnect)
+void mulaiLayananJaringan() {
+  if (!ntpSet) {
+    // NTP pakai IP langsung (time.google.com, anycast stabil): nama host di sini
+    // memicu bug core 3.3.x — callback DNS SNTP bentrok dgn hostByName()
+    // (dns_clear_cache tanpa lock TCPIP) -> assert udp_new_ip_type -> reboot loop.
+    configTime(7 * 3600, 0, "216.239.35.0", "216.239.35.4"); // WIB
+    ntpSet = true;
+  }
+  if (!mdnsOn) {
+    if (MDNS.begin(MDNS_NAME)) {
+      MDNS.addService("http", "tcp", 80);
+      mdnsOn = true;
+      Serial.println("[WIFI] mDNS aktif: http://bagus.local");
+    } else {
+      Serial.println("[WIFI] mDNS gagal dimulai");
+    }
+  }
+}
+
 void wifiWatchdog() {
   bool conn = (WiFi.status() == WL_CONNECTED);
   if (conn != staOk) {
     staOk = conn;
     if (conn) {
-      Serial.print("[WIFI] Terhubung kembali, IP: ");
+      Serial.print("[WIFI] Tersambung! IP: ");
       Serial.println(WiFi.localIP());
-      staLostMs = 0;
+      mulaiLayananJaringan();
     } else {
-      Serial.println("[WIFI] Koneksi terputus, mencoba menghubungkan ulang...");
-      staLostMs = millis();
+      Serial.println("[WIFI] Terputus - menghubungkan ulang...");
     }
   }
-  // >60 dtk tanpa WiFi -> nyalakan AP fallback agar web tetap bisa diakses
-  if (!staOk && !apOn && staLostMs && (millis() - staLostMs > 60000)) {
-    WiFi.mode(WIFI_AP_STA);
-    WiFi.softAP(AP_SSID, AP_PASS);
-    apOn = true;
-    Serial.print("[WIFI] AP fallback aktif: ");
-    Serial.print(AP_SSID);
-    Serial.print(" | IP: ");
-    Serial.println(WiFi.softAPIP());
+  // autoReconnect kadang berhenti sendiri; dorong ulang tiap 30 dtk selama putus
+  static unsigned long lastKick = 0;
+  if (!conn && millis() - lastKick > 30000) {
+    lastKick = millis();
+    Serial.println("[WIFI] Mencoba menghubungkan ulang...");
+    WiFi.reconnect();
   }
 }
 
@@ -648,10 +685,16 @@ void setup() {
   lcdBoot(fsOk ? "LittleFS: OK" : "LittleFS: GAGAL");
   delay(400);
 
-  // WiFi
+  // Preferensi tersimpan (lokasi ramalan cuaca)
+  prefs.begin("jamur", false);
+  lokasiIdx = constrain(prefs.getInt("lokasi", 0), 0, N_LOKASI - 1);
+  Serial.printf("[BOOT] Lokasi ramalan: %s\n", LOKASI[lokasiIdx].nama);
+
+  // WiFi — hanya mode station; bila gagal, terus mencoba ulang dari loop
   WiFi.setHostname(MDNS_NAME);   // nama alat di router (DHCP)
   WiFi.mode(WIFI_STA);
   WiFi.setSleep(false);
+  WiFi.setAutoReconnect(true);
   WiFi.begin(WIFI_SSID, WIFI_PASS);
   Serial.printf("[BOOT] Menghubungkan ke WiFi \"%s\"", WIFI_SSID);
   lcdBoot("WiFi: " + String(WIFI_SSID));
@@ -666,21 +709,12 @@ void setup() {
 
   if (WiFi.status() == WL_CONNECTED) {
     staOk = true;
-    WiFi.setAutoReconnect(true);
     Serial.print("[BOOT] WiFi terhubung! IP: ");
     Serial.println(WiFi.localIP());
     lcdBoot(WiFi.localIP().toString());
-    configTime(7 * 3600, 0, "pool.ntp.org", "time.google.com"); // WIB
   } else {
-    Serial.println("[BOOT] WiFi gagal -> mode AP fallback");
-    WiFi.mode(WIFI_AP_STA);          // STA tetap mencoba di latar belakang
-    WiFi.softAP(AP_SSID, AP_PASS);
-    apOn = true;
-    Serial.print("[BOOT] AP: ");
-    Serial.print(AP_SSID);
-    Serial.print(" | IP: ");
-    Serial.println(WiFi.softAPIP());
-    lcdBoot("AP:" + WiFi.softAPIP().toString());
+    Serial.println("[BOOT] WiFi belum tersambung - terus mencoba di latar belakang");
+    lcdBoot("WiFi: mencoba...");
   }
   delay(800);
 
@@ -696,15 +730,12 @@ void setup() {
   Serial.println("[BOOT] Web server aktif di port 80");
   delay(600);
 
-  // mDNS: dashboard bisa dibuka lewat http://bagus.local
-  if (MDNS.begin(MDNS_NAME)) {
-    MDNS.addService("http", "tcp", 80);
-    Serial.println("[BOOT] mDNS aktif: http://bagus.local");
+  // NTP + mDNS (bagus.local) — dijalankan begitu WiFi tersambung
+  if (staOk) {
+    mulaiLayananJaringan();
     lcdBoot("bagus.local");
-  } else {
-    Serial.println("[BOOT] mDNS gagal dimulai");
+    delay(600);
   }
-  delay(600);
 
   // Data awal
   if (staOk) fetchWeather();
@@ -724,7 +755,7 @@ void loop() {
   if (now - tWater  >= WATER_MS)   { tWater  = now; tickWater(); }
   if (now - tLcd    >= LCD_MS)     { tLcd    = now; lcdRuntime(); }
   if (now - tWifi   >= WIFI_CHK_MS){ tWifi   = now; wifiWatchdog(); }
-  if (staOk && now - tWeather >= WEATHER_MS) { tWeather = now; fetchWeather(); }
+  if (staOk && (wantFetch || now - tWeather >= WEATHER_MS)) { tWeather = now; wantFetch = false; fetchWeather(); }
 
   delay(2);
 }

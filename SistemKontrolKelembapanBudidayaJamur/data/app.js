@@ -62,7 +62,7 @@ function render(){
   if (!st) return;
   $('banOffline').classList.remove('show');
   $('dotNet').className = 'dot on';
-  $('chipNet').textContent = (st.sys.ap ? 'AP ' : 'WiFi ') + st.sys.ip;
+  $('chipNet').textContent = 'WiFi ' + st.sys.ip;
 
   // banner
   $('banSensor').classList.toggle('show', !st.ok);
@@ -95,7 +95,10 @@ function render(){
     const d = fcEnd - st.rh;
     $('fFc').textContent = (d >= 0 ? 'naik +' : 'turun ') + d.toFixed(1) + ' % dari sekarang';
   }
-  // cuaca daerah di hero
+  // cuaca daerah di hero (lokasi bisa dipilih)
+  $('hcLok').textContent = (st.w && st.w.nama ? st.w.nama : '—').toUpperCase();
+  document.querySelectorAll('#segLok button').forEach(bt =>
+    bt.classList.toggle('act', st.w && +bt.dataset.l === st.w.lok));
   if (st.w && st.w.ok){
     $('hcEmoji').textContent = WMOJI(st.w.code);
     $('hcT').textContent = fmt(st.w.t) + '°C';
@@ -103,7 +106,10 @@ function render(){
     $('hcDesc').textContent = st.w.desc;
     $('hcMeta').textContent = 'Open-Meteo · diperbarui ' + st.w.ageS + ' dtk lalu';
   } else {
-    $('hcDesc').textContent = 'belum ada data (cek internet alat)';
+    $('hcEmoji').textContent = '🌡';
+    $('hcT').textContent = '--°C';
+    $('hcRH').textContent = '--%';
+    $('hcDesc').textContent = 'memuat data lokasi…';
   }
 
   // tile mist maker
@@ -167,6 +173,8 @@ $('slMist').addEventListener('change', e => { dragging = false; ctl({ dev: 'mist
 $('swFan').addEventListener('change', e => ctl({ dev: 'fan', val: e.target.checked ? 1 : 0 }));
 $('swValve').addEventListener('change', e => ctl({ dev: 'valve', val: e.target.checked ? 1 : 0 }));
 $('btnResetAlarm').addEventListener('click', () => ctl({ dev: 'alarm' }));
+document.querySelectorAll('#segLok button').forEach(bt =>
+  bt.addEventListener('click', () => ctl({ dev: 'lokasi', val: bt.dataset.l })));
 
 /* ============================================================
    GRAFIK — ECharts, dua panel (kelembapan besar + suhu kecil).

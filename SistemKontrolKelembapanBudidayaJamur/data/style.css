@@ -91,6 +91,8 @@ header h1{font-family:var(--f-disp);font-size:clamp(17px,2.4vw,23px);font-weight
 .hc-sep{color:var(--muted);font-weight:400}
 .hc-desc{color:var(--sage);font-size:13px}
 .hc-meta{font-size:10px;color:var(--muted);letter-spacing:.06em}
+.seg.mini button{padding:5px 11px;font-size:10px}
+.hero-cuaca .seg{margin-top:5px}
 @media (max-width:760px){
   .hero-cuaca{margin-left:0;align-items:flex-start;text-align:left;width:100%;
     border-top:1px solid var(--grid);padding-top:12px;margin-top:4px}
