@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sistem Kendali Kelembapan Budidaya Jamur Berbasis Artificial Intelligence</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍄</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,700;12..96,800&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <div class="eyebrow">KUMBUNG JAMUR · MONITORING &amp; KENDALI</div>
+      <h1>Sistem Kendali Kelembapan Budidaya Jamur<br>Berbasis Artificial Intelligence</h1>
+    </div>
+    <div class="chips">
+      <span class="chip"><span class="dot" id="dotNet"></span><span id="chipNet">menghubungkan…</span></span>
+      <span class="chip"><span class="dot" id="dotSensor"></span>SHT31</span>
+      <span class="chip mono" id="chipClock">--:--:--</span>
+    </div>
+  </header>
+
+  <div class="banner" id="banOffline"><span class="ic">📡</span><span>Terputus dari alat — mencoba menghubungkan ulang…</span></div>
+  <div class="banner" id="banSensor"><span class="ic">⚠️</span><span>Sensor SHT31 tidak terbaca — kabut dimatikan (fail-safe). Periksa kabel I2C.</span></div>
+  <div class="banner" id="banAlarm"><span class="ic">🚨</span><span><b>Alarm air:</b> pengisian lebih dari 5 menit, kran ditutup paksa. Periksa kran &amp; pelampung.</span><button id="btnResetAlarm">Reset alarm</button></div>
+  <div class="banner warn" id="banSafety"><span class="ic">🛑</span><span><b>Safety:</b> kelembapan ≥ 90% — mist maker dimatikan otomatis.</span></div>
+
+  <section class="hero card">
+    <div class="fog" id="fog"><i></i><i></i><i></i></div>
+    <div class="hero-in">
+      <div class="eyebrow">KELEMBAPAN RUANG</div>
+      <div class="hero-row">
+        <div class="hero-val"><span id="heroRH">--</span><span class="unit">%</span></div>
+        <div class="hero-side">
+          <span class="badge" id="bRH">●&nbsp;menunggu data</span>
+          <div class="hero-target mono">target 70–90% · kabut <span id="heroMist">0</span>%</div>
+        </div>
+        <div class="hero-cuaca">
+          <div class="eyebrow">CUACA LUAR · <span id="hcLok">—</span></div>
+          <div class="hc-main"><span class="em" id="hcEmoji">🌡</span><span id="hcT">--°C</span><span class="hc-sep">·</span>RH <span id="hcRH">--%</span></div>
+          <div class="hc-desc" id="hcDesc">menunggu data cuaca…</div>
+          <div class="hc-meta mono" id="hcMeta">Open-Meteo · tiap 5 menit</div>
+          <div class="seg mini" id="segLok" role="group" aria-label="Lokasi ramalan">
+            <button data-l="0">Bojonegoro</button><button data-l="1">Polinema</button>
+          </div>
+        </div>
+      </div>
+      <p class="ai"><span class="ai-ic">🧠</span><span id="aiTxt">Menunggu data sensor…</span></p>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="chart-head">
+      <h2>Riwayat 3 menit &amp; prediksi 5 menit</h2>
+      <div class="legend mono">
+        <span><i class="sw line"></i>Kelembapan</span>
+        <span><i class="sw dash"></i>Prediksi AI</span>
+        <span><i class="sw band"></i>Zona ideal 70–90%</span>
+      </div>
+    </div>
+    <div id="chart"></div>
+    <div id="chartFallback" class="chart-fallback" hidden>
+      Grafik membutuhkan koneksi internet (CDN ECharts). Data &amp; kontrol tetap berjalan normal.
+    </div>
+  </section>
+
+  <div class="tiles">
+    <div class="tile">
+      <div class="lbl">SUHU RUANG</div>
+      <div class="val"><span id="vT">--</span><small> °C</small></div>
+      <div class="foot" id="fT">sensor SHT31</div>
+    </div>
+    <div class="tile">
+      <div class="lbl">PREDIKSI +5 MENIT</div>
+      <div class="val"><span id="vFc">--</span><small> %</small></div>
+      <div class="foot" id="fFc">model Holt (AI)</div>
+    </div>
+    <div class="tile">
+      <div class="lbl">MIST MAKER (KABUT)</div>
+      <div class="val"><span id="vMist">--</span><small> %</small></div>
+      <div class="foot" id="fMist">—</div>
+    </div>
+    <div class="tile">
+      <div class="lbl">AIR TANDON</div>
+      <div class="val" id="vAir">--</div>
+      <div class="foot" id="fAir">pelampung GPIO 26</div>
+    </div>
+  </div>
+
+  <section class="card">
+    <h2>Kendali aktuator</h2>
+
+    <div class="ctl-row">
+      <div class="ctl-name">
+        <b>💨 Mist maker</b>
+        <div class="st">AUTO: AI prediktif · <span class="mono" id="stMist">PWM 0%</span></div>
+      </div>
+      <div class="seg" id="segMist" role="group" aria-label="Mode mist maker">
+        <button data-m="auto">AUTO</button><button data-m="manual">MANUAL</button>
+      </div>
+      <div class="ctl-io">
+        <input type="range" id="slMist" min="0" max="100" value="0" disabled aria-label="PWM mist maker">
+        <span class="pct mono" id="pctMist">0%</span>
+      </div>
+    </div>
+
+    <div class="ctl-row">
+      <div class="ctl-name">
+        <b>🌀 Kipas penyebar</b>
+        <div class="st">AUTO: ikut mist maker · <span id="stFan">mati</span></div>
+      </div>
+      <div class="seg" id="segFan" role="group" aria-label="Mode kipas">
+        <button data-m="auto">AUTO</button><button data-m="manual">MANUAL</button>
+      </div>
+      <div class="ctl-io">
+        <label class="switch"><input type="checkbox" id="swFan" disabled aria-label="Kipas"><span class="slider"></span></label>
+        <div class="bar" aria-hidden="true"><i id="barMist"></i></div>
+      </div>
+    </div>
+
+    <div class="ctl-row">
+      <div class="ctl-name">
+        <b>🚰 Kran air</b>
+        <div class="st">AUTO: ikut pelampung · <span id="stValve">kran tertutup</span></div>
+      </div>
+      <div class="seg" id="segValve" role="group" aria-label="Mode kran air">
+        <button data-m="auto">AUTO</button><button data-m="manual">MANUAL</button>
+      </div>
+      <div class="ctl-io">
+        <label class="switch"><input type="checkbox" id="swValve" disabled aria-label="Kran air"><span class="slider"></span></label>
+        <span class="badge" id="bWater">●&nbsp;—</span>
+      </div>
+    </div>
+  </section>
+
+  <footer class="mono" id="foot">—</footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.1/dist/echarts.min.js" defer></script>
+<script src="/app.js" defer></script>
+</body>
+</html>
